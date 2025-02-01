@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply bg-dark-950 text-gray-100;
+  }
+}
+
+@layer components {
+  .score-badge {
+    @apply px-2 py-1 rounded-full font-semibold;
+  }
+  
+  .score-badge-low {
+    @apply bg-score-low/10 text-score-low;
+  }
+  
+  .score-badge-mid {
+    @apply bg-score-mid/10 text-score-mid;
+  }
+  
+  .score-badge-high {
+    @apply bg-score-high/10 text-score-high;
+  }
+} 
