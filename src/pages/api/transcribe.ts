@@ -1,13 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import OpenAI from 'openai';
 import { ApiResponse } from '@/types';
-
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing OPENAI_API_KEY environment variable');
-}
+import { env } from '@/env';
+import OpenAI from 'openai';
+import { File } from '@web-std/file';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: env.OPENAI_API_KEY,
 });
 
 export default async function handler(
@@ -21,46 +19,35 @@ export default async function handler(
     });
   }
 
-  const { uploadUrl } = req.body;
-
-  if (!uploadUrl) {
-    return res.status(400).json({
-      success: false,
-      error: 'Missing uploadUrl in request body',
-    });
-  }
-
   try {
-    // In a production environment, you would download the file from uploadUrl
-    // For this example, we'll use a mock transcription
-    const mockTranscription = `Hi, this is John from Acme Corp. I noticed you're in charge of sales operations 
-      at your company. We've developed a new AI-powered sales analytics tool that's helping companies like yours 
-      increase their close rates by 35%. Would you be interested in learning more about how it could help your team?`;
+    const { uploadUrl } = req.body;
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    if (!uploadUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'No upload URL provided',
+      });
+    }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        transcription: mockTranscription,
-      },
-    });
+    // Download the file from the URL
+    const response = await fetch(uploadUrl);
+    const blob = await response.blob();
+    
+    // Create a File object that OpenAI's API can handle
+    const file = new File([blob], 'audio.mp3', { type: 'audio/mpeg' });
 
-    // Production code would look like this:
-    /*
-    const response = await openai.audio.transcriptions.create({
-      file: await fetch(uploadUrl).then(res => res.blob()),
+    const transcription = await openai.audio.transcriptions.create({
+      file,
       model: 'whisper-1',
+      language: 'en',
     });
 
     return res.status(200).json({
       success: true,
       data: {
-        transcription: response.text,
+        transcription: transcription.text,
       },
     });
-    */
   } catch (error) {
     console.error('Transcription error:', error);
     return res.status(500).json({

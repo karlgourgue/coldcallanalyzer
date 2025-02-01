@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
-import { createReadStream } from 'fs';
+import { put } from '@vercel/blob';
 import { ApiResponse } from '@/types';
+import { readFile } from 'fs/promises';
 
 export const config = {
   api: {
@@ -24,12 +25,12 @@ export default async function handler(
     const form = formidable({
       maxFileSize: 25 * 1024 * 1024, // 25MB
       filter: (part) => {
-        return part.mimetype?.includes('audio/wav') || false;
+        return part.mimetype?.includes('audio/') || false;
       },
     });
 
-    const [fields, files] = await form.parse(req);
-    const file = files.file?.[0];
+    const [_, files] = await form.parse(req);
+    const file = Array.isArray(files.file) ? files.file[0] : files.file;
 
     if (!file) {
       return res.status(400).json({
@@ -38,14 +39,17 @@ export default async function handler(
       });
     }
 
-    // In a production environment, you would upload this to a cloud storage service
-    // For this example, we'll just return a mock URL
-    const mockUploadUrl = `https://storage.example.com/${file.originalFilename}`;
+    // Read file buffer and upload to Vercel Blob Storage
+    const buffer = await readFile(file.filepath);
+    const blob = await put(file.originalFilename || 'audio.mp3', buffer, {
+      access: 'public',
+      addRandomSuffix: true,
+    });
 
     return res.status(200).json({
       success: true,
       data: {
-        uploadUrl: mockUploadUrl,
+        uploadUrl: blob.url,
       },
     });
   } catch (error) {
